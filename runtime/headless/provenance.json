@@ -1,0 +1,26 @@
+{
+  "upstream": "https://github.com/JiaboLi-GitHub/renderdoc-mcp",
+  "tag": "v0.3.0",
+  "commit": "50fd55cade854ed24ce8c853fd2dbda04a4b0bdb",
+  "sourcePath": "vendor/headless_engine",
+  "binarySource": "https://github.com/JiaboLi-GitHub/renderdoc-mcp/releases/download/v0.3.0/renderdoc-mcp-windows-x64-v0.3.0.zip",
+  "archiveSha256": "08cc5ffe4a9eeb34308096e72830461b36d81102fd9f1477cebcb6179e8f6e02",
+  "sourcePatches": [],
+  "buildMode": "verified-portable-fallback",
+  "buildBlocker": "No Visual Studio C++ tools or Windows SDK discovered; no SDK installed",
+  "licenses": [
+    "LICENSE",
+    "RENDERDOC-LICENSE.md",
+    "THIRD-PARTY-NOTICES.txt"
+  ],
+  "files": {
+    "d3dcompiler_47.dll": "a05f99734f7c4822fefc12b367af21fd0976ed6608752fb1e1e80b6ece7ecbbb",
+    "dbghelp.dll": "1387a9f99c2f4342dea0d68208081f936b10a0049d28478c896b808c5c13d057",
+    "renderdoc-cli.exe": "a990aa2f0402f04ca9b583625611a81a399dc7db44689a999276d7348fdf3b05",
+    "renderdoc-mcp.exe": "952616511ec9c581d1272dc6af0c779428c3570777f1c6aed955069ab0f2596e",
+    "renderdoc.dll": "4d70fee600a47fbee20c1e75194eba99771f031850353134017cf548da0ab6f9",
+    "renderdoc.json": "305517548c962eb7d65addea87514ae3a4754e99cf0b10875e192ca6dbd1669d",
+    "symsrv.dll": "1d91eab8b40e70c7db6d53d3b15d50bf0784f113307307395302333003b63d98",
+    "symsrv.yes": "36a9e7f1c95b82ffb99743e0c5c4ce95d83c9a430aac59f84ef3cbfab6145068"
+  }
+}

@@ -1,0 +1,49 @@
+# Python environments and generated files
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+
+# Development caches and coverage
+/tests/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.nox/
+.coverage
+.coverage.*
+htmlcov/
+cmake-build-*/
+
+# Local configuration and credentials
+.env
+.env.*
+!.env.example
+mcp-config.local.json
+mcp-config.*.local.json
+
+# RenderDoc output, IPC state, and local captures
+artifacts/
+.runtime-state/
+*.rdc
+*.rdc.zip
+# Keep the bundled upstream test fixture.
+!/vendor/headless_engine/tests/fixtures/vkcube.rdc
+*.log
+*.tmp
+
+# Editor and operating-system files
+.vscode/
+.idea/
+.vs/
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# runtime/headless/bin contains required distribution files.
+# Keep its EXE, DLL, and accompanying metadata in version control.

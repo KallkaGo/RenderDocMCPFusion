@@ -1,0 +1,239 @@
+"""Texture inspection services."""
+
+from .inventory import binding_location
+
+
+class TextureServiceMixin:
+    def inspect_texture_usage(self, params):
+        if not self.ctx.IsCaptureLoaded():
+            return self._no_capture()
+
+        rid = params.get("rid")
+        name_filter = params.get("name")
+        limit = int(params.get("limit", 10) or 10)
+        eid_min = int(params.get("eid_min", 0) or 0)
+        eid_max = int(params.get("eid_max", 0) or 0)
+        result = None
+
+        def collect(controller):
+            nonlocal result
+            tex = self._select_texture(controller, rid, name_filter)
+            if tex is None:
+                result = {
+                    "ok": False,
+                    "mode": "summary",
+                    "data": None,
+                    "err": {"code": "texture_not_found", "msg": "Texture not found"},
+                    "meta": {"cap": "active", "truncated": False},
+                }
+                return
+
+            tex_rid = tex.resourceId
+            usage_items = controller.GetUsage(tex_rid)
+            items = []
+            reads = 0
+            writes = 0
+            producer = None
+            first_read = None
+            first_ps_read = None
+            first_non_compute_read = None
+            last_write = None
+
+            def pass_name_for(action):
+                return self._parent_pass_name(action) or self._find_top_level_pass_for_eid(action.eventId)
+
+            def make_info(use, action, usage_name):
+                return {
+                    "eid": use.eventId,
+                    "usage": usage_name.split(".")[-1],
+                    "name": action.customName or action.GetName(self.ctx.GetStructuredFile()),
+                    "pass": pass_name_for(action),
+                }
+
+            def ctx_for_event(eid_local):
+                contexts = []
+                controller.SetFrameEvent(eid_local, True)
+                pipe = controller.GetPipelineState()
+                rid_str = str(tex_rid)
+
+                def add_ctx(role, stage, slot, name=""):
+                    contexts.append({"role": role, "stage": stage, "slot": slot, "name": name})
+
+                stages = self._binding_stages()
+
+                for stage_name, stage_enum in stages:
+                    refl = None
+                    try:
+                        refl = pipe.GetShaderReflection(stage_enum)
+                    except Exception as exc:
+                        self._warn_swallow("texture.ctx.shader_reflection", exc)
+                        refl = None
+
+                    def bind_name(category, slot):
+                        try:
+                            if not refl:
+                                return ""
+                            if category == "SRV":
+                                for res in refl.readOnlyResources:
+                                    if int(res.fixedBindNumber) == int(slot):
+                                        return res.name
+                            if category == "UAV":
+                                for res in refl.readWriteResources:
+                                    if int(res.fixedBindNumber) == int(slot):
+                                        return res.name
+                        except Exception as exc:
+                            self._warn_swallow("texture.ctx.bind_name", exc)
+                        return ""
+
+                    try:
+                        for srv in pipe.GetReadOnlyResources(stage_enum, False):
+                            if str(srv.descriptor.resource) == rid_str:
+                                location = binding_location(srv, getattr(refl, "readOnlyResources", []))
+                                add_ctx("SRV", stage_name, location["slot"] if location["slot"] is not None else -1, location["name"])
+                    except Exception as exc:
+                        self._warn_swallow("texture.ctx.read_only_resources", exc)
+                    try:
+                        for uav in pipe.GetReadWriteResources(stage_enum, False):
+                            if str(uav.descriptor.resource) == rid_str:
+                                location = binding_location(uav, getattr(refl, "readWriteResources", []))
+                                add_ctx("UAV", stage_name, location["slot"] if location["slot"] is not None else -1, location["name"])
+                    except Exception as exc:
+                        self._warn_swallow("texture.ctx.read_write_resources", exc)
+                try:
+                    for idx, out in enumerate(pipe.GetOutputTargets()):
+                        res = getattr(out, "resource", None)
+                        if str(res) == rid_str:
+                            add_ctx("RT", "OM", idx)
+                except Exception as exc:
+                    self._warn_swallow("texture.ctx.output_targets", exc)
+                try:
+                    ds = pipe.GetDepthTarget()
+                    res = getattr(ds, "resource", None)
+                    if str(res) == rid_str:
+                        add_ctx("DS", "OM", 0)
+                except Exception as exc:
+                    self._warn_swallow("texture.ctx.depth_target", exc)
+                return contexts
+
+            filtered_usage_items = []
+            for use in usage_items:
+                if eid_min and int(use.eventId) < eid_min:
+                    continue
+                if eid_max and int(use.eventId) > eid_max:
+                    continue
+                filtered_usage_items.append(use)
+
+            for use in filtered_usage_items:
+                usage_name = str(use.usage)
+                rw_type = self._usage_kind(usage_name)
+                if rw_type == "read":
+                    reads += 1
+                elif rw_type == "write":
+                    writes += 1
+
+                action = self.ctx.GetAction(use.eventId)
+                action_name = ""
+                if action is not None:
+                    try:
+                        action_name = action.customName or action.GetName(self.ctx.GetStructuredFile())
+                    except Exception:
+                        action_name = action.customName or ""
+
+                items.append(
+                    {
+                        "eid": use.eventId,
+                        "type": rw_type,
+                        "usage": usage_name.split(".")[-1],
+                        "name": action_name,
+                    }
+                )
+
+                if action is None:
+                    continue
+
+                if rw_type == "write":
+                    last_write = make_info(use, action, usage_name)
+                    if producer is None:
+                        producer = last_write
+                elif rw_type == "read":
+                    if first_read is None:
+                        first_read = make_info(use, action, usage_name)
+                    if first_ps_read is None and usage_name.split(".")[-1].startswith("PS_"):
+                        first_ps_read = make_info(use, action, usage_name)
+                    if first_non_compute_read is None and "Dispatch" not in action_name:
+                        first_non_compute_read = make_info(use, action, usage_name)
+
+            items.sort(key=lambda item: item["eid"])
+            truncated = len(items) > limit
+            items = items[:limit]
+
+            first_read_ctx = ctx_for_event(first_read["eid"]) if first_read else []
+            first_ps_read_ctx = ctx_for_event(first_ps_read["eid"]) if first_ps_read else []
+            first_non_compute_read_ctx = (
+                ctx_for_event(first_non_compute_read["eid"]) if first_non_compute_read else []
+            )
+
+            result = {
+                "ok": True,
+                "mode": "summary",
+                "data": {
+                    "rid": str(tex_rid),
+                    "name": self.ctx.GetResourceName(tex_rid),
+                    "meta": self._resource_meta(tex_rid),
+                    "producer": producer,
+                    "last_write": last_write,
+                    "first_read": first_read,
+                    "first_ps_read": first_ps_read,
+                    "first_read_ctx": first_read_ctx,
+                    "first_ps_read_ctx": first_ps_read_ctx,
+                    "first_non_compute_read": first_non_compute_read,
+                    "first_non_compute_read_ctx": first_non_compute_read_ctx,
+                    "uses": {
+                        "read": reads,
+                        "write": writes,
+                    },
+                    "items": items,
+                    "event_range": {
+                        "eid_min": eid_min or None,
+                        "eid_max": eid_max or None,
+                    },
+                },
+                "err": None,
+                "meta": {
+                    "cap": "active",
+                    "truncated": truncated,
+                    "count": len(filtered_usage_items),
+                    "total_count": len(usage_items),
+                },
+            }
+
+        self.ctx.Replay().BlockInvoke(collect)
+        return result
+
+    @staticmethod
+    def _select_texture(controller, rid, name_filter):
+        textures = controller.GetTextures()
+        if rid:
+            rid_str = str(rid)
+            for tex in textures:
+                if str(tex.resourceId) == rid_str:
+                    return tex
+        if name_filter:
+            name_l = str(name_filter).lower()
+            for tex in textures:
+                resource_name = ""
+                try:
+                    resource_name = controller.GetResourceName(tex.resourceId) or ""
+                except Exception:
+                    resource_name = ""
+                tex_name = str(getattr(tex, "name", "") or "")
+                rid_str = str(tex.resourceId)
+                if (
+                    name_l in resource_name.lower()
+                    or name_l in tex_name.lower()
+                    or name_l in rid_str.lower()
+                ):
+                    return tex
+        if not rid and not name_filter:
+            return None
+        return None

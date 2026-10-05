@@ -1,0 +1,6 @@
+{
+  "upstream": "https://github.com/JiaboLi-GitHub/renderdoc-mcp",
+  "tag": "v0.3.0",
+  "commit": "50fd55cade854ed24ce8c853fd2dbda04a4b0bdb",
+  "sourcePatches": []
+}

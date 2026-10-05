@@ -1,0 +1,9 @@
+{
+  "extension_api": 1,
+  "name": "RenderDoc Fusion Bridge",
+  "version": "0.1.0",
+  "minimum_renderdoc": "1.41",
+  "description": "Bridge extension for RenderDoc MCP live analysis tools.",
+  "author": "OpenAI Codex",
+  "url": "https://github.com/JinxiangW/renderdoc-mcp"
+}

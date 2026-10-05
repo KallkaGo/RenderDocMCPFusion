@@ -1,0 +1,42 @@
+{
+  "engine": "headless-replay-engine",
+  "release": "v0.3.0",
+  "renderdocVersion": "1.43",
+  "transport": "stdio-ndjson",
+  "protocolVersion": "2025-03-26",
+  "serverReportedVersion": "1.0.0",
+  "capabilities": {
+    "openCapture": true,
+    "draws": true,
+    "pipelineSummary": true,
+    "shaderDisassembly": true,
+    "shaderReflection": true,
+    "textureStats": true,
+    "pixelHistory": true,
+    "shaderDebug": true,
+    "meshPostTransformPositions": true,
+    "constantBufferValues": false,
+    "actualDescriptorResourceBindings": false,
+    "fullPipelineState": false,
+    "originalMeshAttributes": false
+  },
+  "limitations": [
+    "get_bindings contains shader reflection declarations, not actual resource binding IDs",
+    "pipeline contains shaders, render targets, depth target and viewports only",
+    "mesh is instance0/view0 post-transform xyz and triangle faces, without UV/normal/w",
+    "raw MCP export_texture/export_buffer/export_render_target use the capture directory; gateway must disable these and export through the CLI with an explicit destination",
+    "list_draws in this release returns empty names and zero drawIndex for the tested D3D12 capture",
+    "CLI one-shot commands reopen the capture and incur replay startup cost"
+  ],
+  "unsafeRawTools": [
+    "export_render_target",
+    "export_texture",
+    "export_buffer",
+    "export_snapshot",
+    "capture_frame",
+    "shader_build",
+    "shader_replace",
+    "shader_restore",
+    "shader_restore_all"
+  ]
+}

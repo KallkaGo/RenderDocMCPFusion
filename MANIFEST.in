@@ -1,0 +1,16 @@
+include setup.py
+recursive-include runtime/headless *
+include bridge_extension/bootstrap.py
+include bridge_extension/process_lifecycle.py
+recursive-include bridge_extension/renderdoc_fusion_bridge *.py *.json
+include vendor/gui_client/__init__.py
+include vendor/gui_client/bridge_client.py
+include vendor/gui_client/ATTRIBUTION.md
+include vendor/gui_client/GUI_INTERFACE.md
+include scripts/launch_gui.py
+prune vendor/gui_client/upstream_bridge
+prune vendor/headless_engine
+prune .venv
+prune artifacts
+prune .runtime-state
+global-exclude __pycache__ *.py[cod]

@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=70.1"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "renderdoc-mcp-fusion"
+version = "0.1.0"
+description = "A shared local MCP gateway for RenderDoc GUI and standalone replay"
+requires-python = ">=3.11"
+dependencies = [
+    "mcp==1.30.0",
+    "uvicorn>=0.31.1,<1",
+    "pywin32; sys_platform == 'win32'",
+]
+
+[project.scripts]
+renderdoc-mcp-fusion = "renderdoc_mcp_fusion.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+

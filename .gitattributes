@@ -1,0 +1,2 @@
+# Preserve exact bytes of the bundled runtime and its checksum-pinned metadata.
+/runtime/headless/bin/* -text

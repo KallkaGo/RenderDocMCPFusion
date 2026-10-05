@@ -1,0 +1,1096 @@
+{
+  "tools": [
+    {
+      "description": "Open a RenderDoc capture file (.rdc) for analysis. Returns the graphics API type and total event/draw counts. Closes any previously opened capture.",
+      "inputSchema": {
+        "properties": {
+          "path": {
+            "description": "Absolute path to the .rdc capture file",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path"
+        ],
+        "type": "object"
+      },
+      "name": "open_capture"
+    },
+    {
+      "description": "List all draw calls and actions in the currently opened capture.",
+      "inputSchema": {
+        "properties": {
+          "filter": {
+            "description": "Optional case-insensitive filter keyword",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "name": "list_events"
+    },
+    {
+      "description": "Navigate to a specific event by its event ID.",
+      "inputSchema": {
+        "properties": {
+          "eventId": {
+            "description": "Event ID to navigate to",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "eventId"
+        ],
+        "type": "object"
+      },
+      "name": "goto_event"
+    },
+    {
+      "description": "List draw calls with vertex/index counts, instance counts, and flags.",
+      "inputSchema": {
+        "properties": {
+          "filter": {
+            "description": "Filter by name keyword",
+            "type": "string"
+          },
+          "limit": {
+            "description": "Max results (default 1000)",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "name": "list_draws"
+    },
+    {
+      "description": "Get detailed information about a specific draw call.",
+      "inputSchema": {
+        "properties": {
+          "eventId": {
+            "description": "Event ID of the draw call",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "eventId"
+        ],
+        "type": "object"
+      },
+      "name": "get_draw_info"
+    },
+    {
+      "description": "Get metadata about the currently opened capture file including API, GPU, resolution, total event/draw counts, and driver info.",
+      "inputSchema": {
+        "properties": {},
+        "type": "object"
+      },
+      "name": "get_capture_info"
+    },
+    {
+      "description": "Get performance statistics: per-pass breakdown, top draws by triangle count, largest resources.",
+      "inputSchema": {
+        "properties": {},
+        "type": "object"
+      },
+      "name": "get_stats"
+    },
+    {
+      "description": "Get debug/validation messages from the capture.",
+      "inputSchema": {
+        "properties": {
+          "eventId": {
+            "description": "Filter by event ID",
+            "type": "integer"
+          },
+          "level": {
+            "description": "Minimum severity level",
+            "enum": [
+              "HIGH",
+              "MEDIUM",
+              "LOW",
+              "INFO"
+            ],
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "name": "get_log"
+    },
+    {
+      "description": "List all GPU resources (textures, buffers, shaders, etc.) in the capture with type and size info",
+      "inputSchema": {
+        "properties": {
+          "name": {
+            "description": "Filter by name keyword (case-insensitive)",
+            "type": "string"
+          },
+          "type": {
+            "description": "Filter by resource type keyword (e.g. Texture, Buffer, Shader)",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "name": "list_resources"
+    },
+    {
+      "description": "Get detailed information about a specific GPU resource by its ID",
+      "inputSchema": {
+        "properties": {
+          "resourceId": {
+            "description": "Resource ID string (e.g. ResourceId::123)",
+            "type": "string"
+          }
+        },
+        "required": [
+          "resourceId"
+        ],
+        "type": "object"
+      },
+      "name": "get_resource_info"
+    },
+    {
+      "description": "List all render passes in the capture (marker regions containing draw or dispatch calls)",
+      "inputSchema": {
+        "properties": {},
+        "type": "object"
+      },
+      "name": "list_passes"
+    },
+    {
+      "description": "Get details about a specific render pass including its draw calls",
+      "inputSchema": {
+        "properties": {
+          "eventId": {
+            "description": "Event ID of the pass marker",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "eventId"
+        ],
+        "type": "object"
+      },
+      "name": "get_pass_info"
+    },
+    {
+      "description": "Get shader disassembly or reflection data at an event for a given stage",
+      "inputSchema": {
+        "properties": {
+          "eventId": {
+            "description": "Event ID (uses current if omitted)",
+            "type": "integer"
+          },
+          "mode": {
+            "default": "disasm",
+            "enum": [
+              "disasm",
+              "reflect"
+            ],
+            "type": "string"
+          },
+          "stage": {
+            "enum": [
+              "vs",
+              "hs",
+              "ds",
+              "gs",
+              "ps",
+              "cs"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "stage"
+        ],
+        "type": "object"
+      },
+      "name": "get_shader"
+    },
+    {
+      "description": "List all unique shaders used in the capture with their stages and usage count",
+      "inputSchema": {
+        "properties": {},
+        "type": "object"
+      },
+      "name": "list_shaders"
+    },
+    {
+      "description": "Search shader disassembly text across all shaders for a pattern",
+      "inputSchema": {
+        "properties": {
+          "limit": {
+            "description": "Max results, default 50",
+            "type": "integer"
+          },
+          "pattern": {
+            "description": "Text pattern to search for (case-insensitive substring)",
+            "type": "string"
+          },
+          "stage": {
+            "description": "Limit to specific stage",
+            "enum": [
+              "vs",
+              "hs",
+              "ds",
+              "gs",
+              "ps",
+              "cs"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "pattern"
+        ],
+        "type": "object"
+      },
+      "name": "search_shaders"
+    },
+    {
+      "description": "Get the graphics pipeline state at the current or specified event. Returns bound shaders, render targets, viewports, and pipeline configuration.",
+      "inputSchema": {
+        "properties": {
+          "eventId": {
+            "description": "Event ID to inspect (uses current if omitted)",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "name": "get_pipeline_state"
+    },
+    {
+      "description": "Get descriptor/resource bindings for all shader stages at the current or specified event. Shows constant buffers, textures, UAVs, and samplers from shader reflection.",
+      "inputSchema": {
+        "properties": {
+          "eventId": {
+            "description": "Event ID (uses current if omitted)",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "name": "get_bindings"
+    },
+    {
+      "description": "Export the current event's render target as a PNG file. The file is saved to an auto-generated path in the capture's directory. Call goto_event first to select which event to export.",
+      "inputSchema": {
+        "properties": {
+          "index": {
+            "default": 0,
+            "description": "Render target index (0-7), defaults to 0",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "name": "export_render_target"
+    },
+    {
+      "description": "Export a texture resource as a PNG image by resource ID.",
+      "inputSchema": {
+        "properties": {
+          "layer": {
+            "description": "Array layer, default 0",
+            "type": "integer"
+          },
+          "mip": {
+            "description": "Mip level, default 0",
+            "type": "integer"
+          },
+          "resourceId": {
+            "description": "Resource ID (e.g. ResourceId::123)",
+            "type": "string"
+          }
+        },
+        "required": [
+          "resourceId"
+        ],
+        "type": "object"
+      },
+      "name": "export_texture"
+    },
+    {
+      "description": "Export buffer data to a binary file.",
+      "inputSchema": {
+        "properties": {
+          "offset": {
+            "description": "Byte offset, default 0",
+            "type": "integer"
+          },
+          "resourceId": {
+            "description": "Resource ID",
+            "type": "string"
+          },
+          "size": {
+            "description": "Byte count (0 = all), default 0",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "resourceId"
+        ],
+        "type": "object"
+      },
+      "name": "export_buffer"
+    },
+    {
+      "description": "Launch an application with RenderDoc injected, capture a frame after a delay, and automatically open it for analysis. Returns capture info (API, total event/draw counts) and the .rdc file path.",
+      "inputSchema": {
+        "properties": {
+          "cmdLine": {
+            "description": "Command line arguments for the target",
+            "type": "string"
+          },
+          "delayFrames": {
+            "description": "Number of frames to wait before capturing. Default: 100",
+            "type": "integer"
+          },
+          "exePath": {
+            "description": "Absolute path to the target executable",
+            "type": "string"
+          },
+          "outputPath": {
+            "description": "Path for the .rdc file. Default: auto-generated in temp directory",
+            "type": "string"
+          },
+          "workingDir": {
+            "description": "Working directory for the target. Defaults to exePath's parent directory",
+            "type": "string"
+          }
+        },
+        "required": [
+          "exePath"
+        ],
+        "type": "object"
+      },
+      "name": "capture_frame"
+    },
+    {
+      "description": "Query the modification history of a pixel up to the current or specified event. Returns which draws wrote to the pixel, shader output values (float/uint/int), post-blend values, depth, and pass/fail status. Note: history is bounded by the specified eventId.",
+      "inputSchema": {
+        "properties": {
+          "eventId": {
+            "description": "Event ID to query up to (default: current event)",
+            "type": "integer"
+          },
+          "targetIndex": {
+            "description": "Color render target index (0-7), default 0",
+            "type": "integer"
+          },
+          "x": {
+            "description": "Pixel X coordinate",
+            "type": "integer"
+          },
+          "y": {
+            "description": "Pixel Y coordinate",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "x",
+          "y"
+        ],
+        "type": "object"
+      },
+      "name": "pixel_history"
+    },
+    {
+      "description": "Read the color value of a single pixel at the current or specified event. Returns float, uint, and int representations.",
+      "inputSchema": {
+        "properties": {
+          "eventId": {
+            "description": "Event ID (default: current)",
+            "type": "integer"
+          },
+          "targetIndex": {
+            "description": "Color render target index (0-7), default 0",
+            "type": "integer"
+          },
+          "x": {
+            "description": "Pixel X coordinate",
+            "type": "integer"
+          },
+          "y": {
+            "description": "Pixel Y coordinate",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "x",
+          "y"
+        ],
+        "type": "object"
+      },
+      "name": "pick_pixel"
+    },
+    {
+      "description": "Debug the pixel/fragment shader at a specific pixel. Returns shader inputs, outputs, and optionally a full step-by-step execution trace. Variables preserve their original types (float/uint/int) and struct members.",
+      "inputSchema": {
+        "properties": {
+          "eventId": {
+            "description": "Draw call event ID",
+            "type": "integer"
+          },
+          "mode": {
+            "description": "summary=inputs/outputs only (default), trace=full execution",
+            "enum": [
+              "summary",
+              "trace"
+            ],
+            "type": "string"
+          },
+          "primitive": {
+            "description": "Primitive ID (default: any)",
+            "type": "integer"
+          },
+          "x": {
+            "description": "Pixel X coordinate",
+            "type": "integer"
+          },
+          "y": {
+            "description": "Pixel Y coordinate",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "eventId",
+          "x",
+          "y"
+        ],
+        "type": "object"
+      },
+      "name": "debug_pixel"
+    },
+    {
+      "description": "Debug the vertex shader for a specific vertex. Returns shader inputs, outputs, and optionally a full execution trace.",
+      "inputSchema": {
+        "properties": {
+          "eventId": {
+            "description": "Draw call event ID",
+            "type": "integer"
+          },
+          "index": {
+            "description": "Raw index buffer value for indexed draws",
+            "type": "integer"
+          },
+          "instance": {
+            "description": "Instance index, default 0",
+            "type": "integer"
+          },
+          "mode": {
+            "description": "summary (default) or trace",
+            "enum": [
+              "summary",
+              "trace"
+            ],
+            "type": "string"
+          },
+          "vertexId": {
+            "description": "Vertex index to debug",
+            "type": "integer"
+          },
+          "view": {
+            "description": "Multiview view index, default 0",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "eventId",
+          "vertexId"
+        ],
+        "type": "object"
+      },
+      "name": "debug_vertex"
+    },
+    {
+      "description": "Debug a compute shader thread at a specific workgroup and thread coordinate. Returns shader inputs, outputs, and optionally a full execution trace.",
+      "inputSchema": {
+        "properties": {
+          "eventId": {
+            "description": "Dispatch event ID",
+            "type": "integer"
+          },
+          "groupX": {
+            "description": "Workgroup X",
+            "type": "integer"
+          },
+          "groupY": {
+            "description": "Workgroup Y",
+            "type": "integer"
+          },
+          "groupZ": {
+            "description": "Workgroup Z",
+            "type": "integer"
+          },
+          "mode": {
+            "description": "summary (default) or trace",
+            "enum": [
+              "summary",
+              "trace"
+            ],
+            "type": "string"
+          },
+          "threadX": {
+            "description": "Thread X within workgroup",
+            "type": "integer"
+          },
+          "threadY": {
+            "description": "Thread Y within workgroup",
+            "type": "integer"
+          },
+          "threadZ": {
+            "description": "Thread Z within workgroup",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "eventId",
+          "groupX",
+          "groupY",
+          "groupZ",
+          "threadX",
+          "threadY",
+          "threadZ"
+        ],
+        "type": "object"
+      },
+      "name": "debug_thread"
+    },
+    {
+      "description": "Get min/max pixel values and optionally a 256-bucket histogram for a texture. Returns typed values (float/uint/int). Useful for detecting NaN values, all-black textures, or unexpected value ranges.",
+      "inputSchema": {
+        "properties": {
+          "eventId": {
+            "description": "Event ID for texture state (default: current)",
+            "type": "integer"
+          },
+          "histogram": {
+            "description": "Include 256-bucket RGBA histogram, default false",
+            "type": "boolean"
+          },
+          "mip": {
+            "description": "Mip level, default 0",
+            "type": "integer"
+          },
+          "resourceId": {
+            "description": "Texture resource ID (e.g. ResourceId::123)",
+            "type": "string"
+          },
+          "slice": {
+            "description": "Array slice, default 0",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "resourceId"
+        ],
+        "type": "object"
+      },
+      "name": "get_texture_stats"
+    },
+    {
+      "description": "List shader compilation encodings supported by the current capture. Call this before shader_build to determine valid encoding values.",
+      "inputSchema": {
+        "properties": {},
+        "required": [],
+        "type": "object"
+      },
+      "name": "shader_encodings"
+    },
+    {
+      "description": "Compile shader source code. Returns a shaderId for use with shader_replace. Encoding must be one of the values from shader_encodings.",
+      "inputSchema": {
+        "properties": {
+          "encoding": {
+            "description": "Shader encoding (from shader_encodings)",
+            "type": "string"
+          },
+          "entry": {
+            "description": "Entry point name (default: main)",
+            "type": "string"
+          },
+          "source": {
+            "description": "Shader source code",
+            "type": "string"
+          },
+          "stage": {
+            "description": "Shader stage",
+            "enum": [
+              "vs",
+              "hs",
+              "ds",
+              "gs",
+              "ps",
+              "cs"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "source",
+          "stage",
+          "encoding"
+        ],
+        "type": "object"
+      },
+      "name": "shader_build"
+    },
+    {
+      "description": "Replace a shader at the given event/stage with a previously built shader. Affects ALL draws using the same shader globally.",
+      "inputSchema": {
+        "properties": {
+          "eventId": {
+            "description": "Event ID to locate shader",
+            "type": "integer"
+          },
+          "shaderId": {
+            "description": "Built shader ID from shader_build",
+            "type": "integer"
+          },
+          "stage": {
+            "description": "Shader stage",
+            "enum": [
+              "vs",
+              "hs",
+              "ds",
+              "gs",
+              "ps",
+              "cs"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "eventId",
+          "stage",
+          "shaderId"
+        ],
+        "type": "object"
+      },
+      "name": "shader_replace"
+    },
+    {
+      "description": "Restore a single shader to its original version.",
+      "inputSchema": {
+        "properties": {
+          "eventId": {
+            "description": "Event ID",
+            "type": "integer"
+          },
+          "stage": {
+            "description": "Shader stage",
+            "enum": [
+              "vs",
+              "hs",
+              "ds",
+              "gs",
+              "ps",
+              "cs"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "eventId",
+          "stage"
+        ],
+        "type": "object"
+      },
+      "name": "shader_restore"
+    },
+    {
+      "description": "Restore all replaced shaders and free all built shader resources.",
+      "inputSchema": {
+        "properties": {},
+        "required": [],
+        "type": "object"
+      },
+      "name": "shader_restore_all"
+    },
+    {
+      "description": "Export post-transform vertex data from a draw call as OBJ or JSON. Decodes vertex positions and generates triangle faces from topology.",
+      "inputSchema": {
+        "properties": {
+          "eventId": {
+            "description": "Draw call event ID",
+            "type": "integer"
+          },
+          "format": {
+            "description": "Output format (default: obj)",
+            "enum": [
+              "obj",
+              "json"
+            ],
+            "type": "string"
+          },
+          "outputPath": {
+            "description": "File path to write (optional, returns inline if omitted)",
+            "type": "string"
+          },
+          "stage": {
+            "description": "Post-transform stage (default: vs-out)",
+            "enum": [
+              "vs-out",
+              "gs-out"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "eventId"
+        ],
+        "type": "object"
+      },
+      "name": "export_mesh"
+    },
+    {
+      "description": "Export complete draw call state: pipeline, shaders, render targets, and depth. Creates a directory with manifest.json indexing all exported files.",
+      "inputSchema": {
+        "properties": {
+          "eventId": {
+            "description": "Draw call event ID",
+            "type": "integer"
+          },
+          "outputDir": {
+            "description": "Output directory path",
+            "type": "string"
+          }
+        },
+        "required": [
+          "eventId",
+          "outputDir"
+        ],
+        "type": "object"
+      },
+      "name": "export_snapshot"
+    },
+    {
+      "description": "Get the usage history of a resource across all events. Shows which events read, write, or bind the resource.",
+      "inputSchema": {
+        "properties": {
+          "resourceId": {
+            "description": "Resource ID (e.g. ResourceId::123)",
+            "type": "string"
+          }
+        },
+        "required": [
+          "resourceId"
+        ],
+        "type": "object"
+      },
+      "name": "get_resource_usage"
+    },
+    {
+      "description": "Assert that a pixel at (x,y) matches expected RGBA values within tolerance. Returns pass/fail with actual vs expected values.",
+      "inputSchema": {
+        "properties": {
+          "eventId": {
+            "description": "Event ID",
+            "type": "integer"
+          },
+          "expected": {
+            "description": "[R, G, B, A] float values",
+            "items": {
+              "type": "number"
+            },
+            "type": "array"
+          },
+          "target": {
+            "description": "Render target index (default 0)",
+            "type": "integer"
+          },
+          "tolerance": {
+            "description": "Per-channel tolerance (default 0.01)",
+            "type": "number"
+          },
+          "x": {
+            "description": "Pixel X coordinate",
+            "type": "integer"
+          },
+          "y": {
+            "description": "Pixel Y coordinate",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "eventId",
+          "x",
+          "y",
+          "expected"
+        ],
+        "type": "object"
+      },
+      "name": "assert_pixel"
+    },
+    {
+      "description": "Assert that a pipeline state field matches an expected value. Path uses dot notation matching the pipeline JSON output (e.g. vertexShader.entryPoint).",
+      "inputSchema": {
+        "properties": {
+          "eventId": {
+            "description": "Event ID",
+            "type": "integer"
+          },
+          "expected": {
+            "description": "Expected value (string comparison)",
+            "type": "string"
+          },
+          "path": {
+            "description": "Dot-separated path (e.g. vertexShader.entryPoint)",
+            "type": "string"
+          }
+        },
+        "required": [
+          "eventId",
+          "path",
+          "expected"
+        ],
+        "type": "object"
+      },
+      "name": "assert_state"
+    },
+    {
+      "description": "Compare two PNG images pixel-by-pixel. Returns pass/fail with diff statistics. Optionally writes a diff visualization PNG.",
+      "inputSchema": {
+        "properties": {
+          "actualPath": {
+            "description": "Path to actual PNG",
+            "type": "string"
+          },
+          "diffOutputPath": {
+            "description": "Path to write diff visualization PNG",
+            "type": "string"
+          },
+          "expectedPath": {
+            "description": "Path to expected PNG",
+            "type": "string"
+          },
+          "threshold": {
+            "description": "Max diff ratio % to pass (default 0.0)",
+            "type": "number"
+          }
+        },
+        "required": [
+          "expectedPath",
+          "actualPath"
+        ],
+        "type": "object"
+      },
+      "name": "assert_image"
+    },
+    {
+      "description": "Assert that a count of resources/events/draws matches expected value. Uses accurate counts bypassing default list limits.",
+      "inputSchema": {
+        "properties": {
+          "expected": {
+            "description": "Expected count",
+            "type": "integer"
+          },
+          "op": {
+            "description": "Comparison operator (default: eq)",
+            "enum": [
+              "eq",
+              "gt",
+              "lt",
+              "ge",
+              "le"
+            ],
+            "type": "string"
+          },
+          "what": {
+            "description": "What to count",
+            "enum": [
+              "draws",
+              "events",
+              "textures",
+              "buffers",
+              "passes"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "what",
+          "expected"
+        ],
+        "type": "object"
+      },
+      "name": "assert_count"
+    },
+    {
+      "description": "Assert that no debug/validation messages exist at or above the specified severity. Returns pass/fail with any matching messages.",
+      "inputSchema": {
+        "properties": {
+          "minSeverity": {
+            "description": "Minimum severity to fail on (default: high)",
+            "enum": [
+              "high",
+              "medium",
+              "low",
+              "info"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "name": "assert_clean"
+    },
+    {
+      "description": "Open two RenderDoc captures for side-by-side diffing. Returns capture info for both captures.",
+      "inputSchema": {
+        "properties": {
+          "captureA": {
+            "description": "Path to capture A",
+            "type": "string"
+          },
+          "captureB": {
+            "description": "Path to capture B",
+            "type": "string"
+          }
+        },
+        "required": [
+          "captureA",
+          "captureB"
+        ],
+        "type": "object"
+      },
+      "name": "diff_open"
+    },
+    {
+      "description": "Close the current diff session and release both captures.",
+      "inputSchema": {
+        "properties": {},
+        "required": [],
+        "type": "object"
+      },
+      "name": "diff_close"
+    },
+    {
+      "description": "Get a high-level summary diff between the two open captures. Returns per-category counts (draws, resources, passes) with deltas.",
+      "inputSchema": {
+        "properties": {},
+        "required": [],
+        "type": "object"
+      },
+      "name": "diff_summary"
+    },
+    {
+      "description": "Diff draw calls between the two open captures. Returns aligned rows with added/deleted/modified/unchanged counts.",
+      "inputSchema": {
+        "properties": {},
+        "required": [],
+        "type": "object"
+      },
+      "name": "diff_draws"
+    },
+    {
+      "description": "Diff resources (textures, buffers) between the two open captures. Returns aligned rows with status and type information.",
+      "inputSchema": {
+        "properties": {},
+        "required": [],
+        "type": "object"
+      },
+      "name": "diff_resources"
+    },
+    {
+      "description": "Diff per-pass statistics between the two open captures. Returns pass rows with draw/triangle/dispatch deltas.",
+      "inputSchema": {
+        "properties": {},
+        "required": [],
+        "type": "object"
+      },
+      "name": "diff_stats"
+    },
+    {
+      "description": "Diff pipeline state at a named marker between the two captures. Returns field-level differences for the matched draw.",
+      "inputSchema": {
+        "properties": {
+          "marker": {
+            "description": "Marker path to locate the draw in both captures",
+            "type": "string"
+          }
+        },
+        "required": [
+          "marker"
+        ],
+        "type": "object"
+      },
+      "name": "diff_pipeline"
+    },
+    {
+      "description": "Compare framebuffer output between the two captures at specific event IDs. Returns pixel-level diff statistics and optionally writes a diff image.",
+      "inputSchema": {
+        "properties": {
+          "diffOutput": {
+            "description": "Path to write diff visualization PNG",
+            "type": "string"
+          },
+          "eidA": {
+            "description": "Event ID in capture A (default: 0 = last)",
+            "type": "integer"
+          },
+          "eidB": {
+            "description": "Event ID in capture B (default: 0 = last)",
+            "type": "integer"
+          },
+          "target": {
+            "description": "Render target index (default: 0)",
+            "type": "integer"
+          },
+          "threshold": {
+            "description": "Max diff ratio to pass (default: 0.0)",
+            "type": "number"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "name": "diff_framebuffer"
+    },
+    {
+      "description": "Query color and depth attachments for a render pass (format, dimensions, resource IDs)",
+      "inputSchema": {
+        "properties": {
+          "eventId": {
+            "description": "Event ID within the pass (marker or draw)",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "eventId"
+        ],
+        "type": "object"
+      },
+      "name": "get_pass_attachments"
+    },
+    {
+      "description": "Return per-pass aggregated statistics: draw/dispatch counts, triangles, RT dimensions",
+      "inputSchema": {
+        "properties": {},
+        "type": "object"
+      },
+      "name": "get_pass_statistics"
+    },
+    {
+      "description": "Build inter-pass resource dependency DAG showing which passes feed data to others",
+      "inputSchema": {
+        "properties": {},
+        "type": "object"
+      },
+      "name": "get_pass_deps"
+    },
+    {
+      "description": "Detect render targets written but never consumed by visible output (optimization hints)",
+      "inputSchema": {
+        "properties": {},
+        "type": "object"
+      },
+      "name": "find_unused_targets"
+    }
+  ]
+}
