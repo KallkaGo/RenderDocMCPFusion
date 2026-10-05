@@ -339,6 +339,10 @@ GUI 专用调用在 headless 捕获句柄上会返回 `UNSUPPORTED_OPERATION`。
 | `RENDERDOC_FUSION_OUTPUT_DIR` | 指定输出目录 |
 | `RENDERDOC_FUSION_SERVICE_DIR` | 指定共享服务的状态和缓存目录 |
 
+## 许可证
+
+本项目采用 [MIT 许可证](LICENSE)。第三方组件保留各自的版权声明和许可证。
+
 ## 鸣谢
 
 感谢以下开源项目及其贡献者：
