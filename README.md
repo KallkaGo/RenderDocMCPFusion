@@ -12,7 +12,7 @@ RenderDoc MCP Fusion 为 MCP 客户端提供 RDC 抓帧分析工具。多个客�
 | 操作系统 | Windows x64 |
 | Python | 3.11 或更高版本 |
 | GUI 模式 | 本机安装 RenderDoc；已适配 1.46 |
-| headless 模式 | 附带引擎 v0.3.0，使用 RenderDoc 1.43 |
+| headless 模式 | 附带引擎 v0.3.0，本机构建，使用 RenderDoc 1.46 |
 | 回放硬件 | 与抓帧兼容的 GPU 和驱动 |
 
 本文使用以下术语：
@@ -348,6 +348,6 @@ GUI 专用调用在 headless 捕获句柄上会返回 `UNSUPPORTED_OPERATION`。
 感谢以下开源项目及其贡献者：
 
 - [RenderDoc](https://github.com/baldurk/renderdoc)：提供图形捕获、回放和调试能力。
-- [JiaboLi-GitHub/renderdoc-mcp](https://github.com/JiaboLi-GitHub/renderdoc-mcp)：提供本项目使用的 headless 引擎。
+- [JiaboLi-GitHub/renderdoc-mcp](https://github.com/JiaboLi-GitHub/renderdoc-mcp)：为 headless 引擎提供参考。
 - [Hengle/RenderDocMCP2](https://github.com/Hengle/RenderDocMCP2)：为查询和导出功能提供参考。
 - [stb](https://github.com/nothings/stb)：提供 headless 引擎使用的 `stb_image` 和 `stb_image_write` 图像读写库。

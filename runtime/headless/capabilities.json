@@ -1,7 +1,7 @@
 {
   "engine": "headless-replay-engine",
   "release": "v0.3.0",
-  "renderdocVersion": "1.43",
+  "renderdocVersion": "1.46",
   "transport": "stdio-ndjson",
   "protocolVersion": "2025-03-26",
   "serverReportedVersion": "1.0.0",
