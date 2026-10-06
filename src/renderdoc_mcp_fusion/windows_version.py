@@ -6,10 +6,10 @@ import struct
 
 
 _LABELS = {
-    "FileDescription": "RenderDoc MCP",
-    "ProductName": "RenderDoc MCP Fusion",
-    "InternalName": "RenderDocMCP",
-    "OriginalFilename": "RenderDocMCP.exe",
+    "FileDescription": "RDC MCP",
+    "ProductName": "RDC MCP",
+    "InternalName": "RDCMCP",
+    "OriginalFilename": "RDCMCP.exe",
 }
 
 

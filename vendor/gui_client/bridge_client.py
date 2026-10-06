@@ -202,13 +202,17 @@ class LiveBridgeClient:
         if heartbeat_age >= HEARTBEAT_STALE_SECONDS:
             return None
 
-        info: dict[str, Any] = {}
         try:
-            raw_info = json.loads(info_file.read_text(encoding="utf-8"))
-            if isinstance(raw_info, dict):
-                info = raw_info
-        except (OSError, ValueError, json.JSONDecodeError):
-            pass
+            info = json.loads(info_file.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            return None
+        # A heartbeat can precede the first info write (including with older
+        # bridges). Keep startup polling until process identity is available.
+        if not isinstance(info, dict):
+            return None
+        pid = info.get("pid")
+        if isinstance(pid, bool) or not isinstance(pid, int) or not 0 < pid <= 0xFFFFFFFF:
+            return None
 
         instance_id = str(info.get("window_id") or info.get("bridge_id") or bridge_id)
         return LiveBridgeInstance(

@@ -196,6 +196,7 @@ class GuiBackend:
                 code = "GUI_START_TIMEOUT" if payload.get("error_code") == "timeout" else "GUI_START_FAILED"
                 raise FusionError(code, payload.get("error") or "GUI bootstrap did not confirm readiness", status)
             # Bootstrap readiness and the first heartbeat are separate writes.
+            # Discovery requires readable process identity as well as heartbeat.
             # Wait for the launched ID itself, then let connect apply selection.
             launched_id = payload["window_id"]
             while not self._matches(launched_id):

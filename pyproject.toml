@@ -15,6 +15,8 @@ dependencies = [
 ]
 
 [project.scripts]
+rdc-mcp-fusion = "renderdoc_mcp_fusion.cli:main"
+# Keep existing client configurations working after upgrades.
 renderdoc-mcp-fusion = "renderdoc_mcp_fusion.cli:main"
 
 [tool.setuptools.packages.find]

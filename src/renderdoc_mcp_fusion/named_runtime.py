@@ -22,13 +22,13 @@ def prepare_hub_executable(directory):
     if not source.is_file():
         raise RuntimeError("The base Python runtime has no pythonw.exe for hidden Hub startup")
     files = [source, *sorted(home.glob("*.dll"))]
-    digest = hashlib.sha256(b"display-name-v3" + str(home).encode() + str(prefix).encode()
+    digest = hashlib.sha256(b"display-name-v4" + str(home).encode() + str(prefix).encode()
                             + system_site.encode())
     for path in files:
         digest.update(path.name.encode())
         digest.update(path.read_bytes())
     root = Path(directory) / "named-runtime" / digest.hexdigest()[:20]
-    executable = root / "Scripts" / "RenderDocMCP.exe"
+    executable = root / "Scripts" / "RDCMCP.exe"
     ready = root / "ready"
     if ready.is_file() and executable.is_file():
         return executable

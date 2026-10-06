@@ -50,7 +50,7 @@ python -m renderdoc_mcp_fusion --print-config
 如果 Python 的 Scripts 目录已加入 `PATH`，也可以执行：
 
 ```powershell
-renderdoc-mcp-fusion --print-config
+rdc-mcp-fusion --print-config
 ```
 
 追加 `--output mcp-config.local.json` 可保存配置。命令只创建新文件，不覆盖已有文件。
@@ -60,8 +60,8 @@ renderdoc-mcp-fusion --print-config
 ```json
 {
   "mcpServers": {
-    "renderdoc-fusion": {
-      "command": "C:\\Python313\\Scripts\\renderdoc-mcp-fusion.exe",
+    "rdc-fusion": {
+      "command": "C:\\Python313\\Scripts\\rdc-mcp-fusion.exe",
       "args": []
     }
   }
@@ -71,9 +71,9 @@ renderdoc-mcp-fusion --print-config
 如需通过 CC Switch 管理配置：
 
 1. 在 MCP 面板新增自定义服务。
-2. 将服务器 ID 设为 `renderdoc-fusion`。
+2. 将服务器 ID 设为 `rdc-fusion`。
 3. 将传输类型设为 `stdio`。
-4. 将 `mcpServers.renderdoc-fusion` 内的对象填入单个服务配置。该对象包含 `command` 和 `args`。如需指定 RenderDoc 路径等选项，添加 `env`。
+4. 将 `mcpServers.rdc-fusion` 内的对象填入单个服务配置。该对象包含 `command` 和 `args`。如需指定 RenderDoc 路径等选项，添加 `env`。
 5. 保存配置，并启用目标客户端的同步开关。
 6. 在目标客户端重新连接 MCP，或重启客户端。
 
@@ -196,14 +196,14 @@ headless 回放的空闲回收与共享服务的退出倒计时分别工作。
 
 | 页面 | 名称 |
 | --- | --- |
-| 进程 | `RenderDoc MCP` |
-| 详细信息 | `RenderDocMCP.exe` |
+| 进程 | `RDC MCP` |
+| 详细信息 | `RDCMCP.exe` |
 
-连接器可能显示为 Python 进程。RenderDoc 窗口对应 `qrenderdoc.exe`。请用 `get_backend_status` 返回的 `service_pid` 核对共享服务，避免把连接器退出当成共享服务退出。
+使用新配置启动时，连接器启动文件名为 `rdc-mcp-fusion.exe`，其子进程可能显示为 Python。旧的 `renderdoc-mcp-fusion` 命令保留兼容；要使用新名称，请重新生成并更新客户端配置。RenderDoc 窗口对应 `qrenderdoc.exe`。请用 `get_backend_status` 返回的 `service_pid` 核对共享服务，避免把连接器退出当成共享服务退出。
 
 共享服务使用基础 Python 的 `pythonw.exe` 和运行库生成专用启动文件。缓存默认位于 `%LOCALAPPDATA%\RenderDocMCPFusion\shared-service\named-runtime`。此过程不修改原 Python 安装。
 
-专用启动文件的描述为 `RenderDoc MCP`。Python 版本和版权信息保留。基础运行库变化后，程序会生成新缓存。`RENDERDOC_FUSION_SERVICE_DIR` 可更改服务状态和缓存目录。安装依赖中的 `pywin32` 提供 Windows 桌面启动和文件描述更新支持。
+专用启动文件的描述为 `RDC MCP`。Python 版本和版权信息保留。基础运行库变化后，程序会生成新缓存。`RENDERDOC_FUSION_SERVICE_DIR` 可更改服务状态和缓存目录。安装依赖中的 `pywin32` 提供 Windows 桌面启动和文件描述更新支持。
 
 ### 更新程序
 

@@ -199,15 +199,17 @@ class BridgeServer(QObject):
         return info
 
     def _write_liveness(self):
+        # Publish identity before advertising readiness. If this write fails,
+        # do not publish a fresh heartbeat for an undiscoverable instance.
+        try:
+            self._write_json_atomic(self.info_file, self._instance_info())
+        except OSError:
+            return
         try:
             temporary = self.heartbeat_file + ".tmp"
             with open(temporary, "w", encoding="utf-8") as handle:
                 handle.write(str(time.time()))
             os.replace(temporary, self.heartbeat_file)
-        except OSError:
-            pass
-        try:
-            self._write_json_atomic(self.info_file, self._instance_info())
         except OSError:
             pass
 

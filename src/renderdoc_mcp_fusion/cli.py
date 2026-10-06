@@ -9,7 +9,7 @@ import sys
 
 def make_config():
     # RECORD tracks the actual launcher for venv, system and --user installs.
-    name = "renderdoc-mcp-fusion.exe" if os.name == "nt" else "renderdoc-mcp-fusion"
+    name = "rdc-mcp-fusion.exe" if os.name == "nt" else "rdc-mcp-fusion"
     try:
         files = metadata.files("renderdoc-mcp-fusion") or ()
     except metadata.PackageNotFoundError:
@@ -19,12 +19,12 @@ def make_config():
     service = ({"command": str(launcher), "args": []} if launcher else
                {"command": str(Path(sys.executable).resolve()),
                 "args": ["-m", "renderdoc_mcp_fusion"]})
-    return {"mcpServers": {"renderdoc-fusion": service}}
+    return {"mcpServers": {"rdc-fusion": service}}
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=
-        "Run the RenderDoc Fusion MCP stdio connector, or print its CC Switch JSON.")
+        "Run the RDC MCP stdio connector, or print its CC Switch JSON.")
     parser.add_argument("--print-config", action="store_true",
                         help="Print generic MCP JSON using this installation's absolute path")
     parser.add_argument("--output", type=Path,

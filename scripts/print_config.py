@@ -1,4 +1,4 @@
-"""Compatibility wrapper; use renderdoc-mcp-fusion --print-config after installation."""
+"""Compatibility wrapper; use rdc-mcp-fusion --print-config after installation."""
 import sys
 
 from renderdoc_mcp_fusion.cli import main

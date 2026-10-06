@@ -83,7 +83,7 @@ def create_server(config=None, *, router=None, manage_lifespan=True):
                 with anyio.CancelScope(shield=True):
                     await router.close()
 
-    server = Server("renderdoc-mcp-fusion", version=__version__, lifespan=lifespan,
+    server = Server("RDC MCP", version=__version__, lifespan=lifespan,
         instructions="One shared local service routes explicit capture_id handles. Each connection "
         "must open its own handle. No implicit current capture exists. GUI opens automatically; "
         "no manual extension enablement is needed. Queries require explicit event IDs. "

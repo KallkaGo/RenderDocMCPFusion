@@ -213,7 +213,7 @@ def get_client_process_ref():
         candidate = ProcessRef.open(parent_pid)
         if int(candidate.creation_token) > int(child.creation_token):
             return None  # Parent PID was reused after this child was created.
-        if os.path.basename(candidate.executable).lower() == 'renderdoc-mcp-fusion.exe':
+        if os.path.basename(candidate.executable).lower() in ('rdc-mcp-fusion.exe', 'renderdoc-mcp-fusion.exe'):
             wrapper = candidate
             candidate = None
             parent_pid = _parent_process_id(wrapper.pid)

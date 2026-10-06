@@ -1,7 +1,7 @@
 {
   "mcpServers": {
-    "renderdoc-fusion": {
-      "command": "C:\\Python313\\Scripts\\renderdoc-mcp-fusion.exe",
+    "rdc-fusion": {
+      "command": "C:\\Python313\\Scripts\\rdc-mcp-fusion.exe",
       "args": []
     }
   }
