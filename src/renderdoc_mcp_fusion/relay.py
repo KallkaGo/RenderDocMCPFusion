@@ -262,8 +262,9 @@ def main():
             return
         try:
             with output_lock:
-                sys.stdout.write(json.dumps(result, ensure_ascii=False, allow_nan=False) + "\n")
-                sys.stdout.flush()
+                # MCP stdio is UTF-8, independent of the Windows pipe encoding.
+                sys.stdout.buffer.write((json.dumps(result, ensure_ascii=False, allow_nan=False) + "\n").encode("utf-8"))
+                sys.stdout.buffer.flush()
         except (OSError, ValueError):
             output_closed.set()
             relay.close()

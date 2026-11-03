@@ -5,7 +5,9 @@
   "sourcePath": "vendor/headless_engine",
   "binarySource": "local-build",
   "archiveSha256": "503c80f85ba4773958dbab89e45ea6b074b403152c66e86cc44930351fa32a36",
-  "sourcePatches": [],
+  "sourcePatches": [
+    "Windows CLI: convert UTF-16 command-line arguments to UTF-8 before parsing and RenderDoc capture access."
+  ],
   "buildMode": "local-msvc",
   "licenses": [
     "LICENSE",
@@ -15,7 +17,7 @@
   "files": {
     "d3dcompiler_47.dll": "e407b9ffadef47e87994dc488214f75405cf04ee99589f2315fc7ab99fd1dfe2",
     "dbghelp.dll": "1387a9f99c2f4342dea0d68208081f936b10a0049d28478c896b808c5c13d057",
-    "renderdoc-cli.exe": "8cebadad8b04de420a17e756bc7a0a3463a6e5c7863bcb13c7894c06da2b834d",
+    "renderdoc-cli.exe": "b1cf0c8e4d96803f13cd738e87d0576df132f14fd2a40c20696e3b1d5e89b7e0",
     "renderdoc-mcp.exe": "1c246377d45d43094e86c06e2b276ec441487b2481970a7666795ca9e5c92639",
     "renderdoc.dll": "195addfdd8aee0c657ba158d26305a5445eb26886a1a4e85c4edba2e7773bdac",
     "renderdoc.json": "1cad6c50fd65f5dbdcb457aeac8a1c6ee5470d66655c6cbf0929f5b807b18bdc",
@@ -46,7 +48,9 @@
       "shader-disassembly",
       "shader-reflection",
       "mesh-export",
-      "cli-info"
+      "cli-info",
+      "cli-info-unicode-path",
+      "cli-export-rt-unicode-path"
     ],
     "unverifiedApis": [
       "D3D11",

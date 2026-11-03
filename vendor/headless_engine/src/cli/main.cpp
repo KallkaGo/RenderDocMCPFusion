@@ -40,6 +40,11 @@
 #include <string>
 #include <vector>
 
+#ifdef _WIN32
+#define NOMINMAX
+#include <windows.h>
+#endif
+
 using namespace renderdoc::core;
 
 // ---------------------------------------------------------------------------
@@ -1253,7 +1258,7 @@ static void cmdUnusedTargets(Session& session) {
 // main
 // ---------------------------------------------------------------------------
 
-int main(int argc, char* argv[]) {
+static int runCli(int argc, char* argv[]) {
     if (argc >= 2 && std::string(argv[1]) == "diff") {
         return cmdDiff(argc, argv);
     }
@@ -1376,4 +1381,38 @@ int main(int argc, char* argv[]) {
     session.close();
     return 0;
 }
+
+#ifdef _WIN32
+int wmain(int argc, wchar_t* wideArgv[]) {
+    // RenderDoc strings are UTF-8; narrow Windows argv uses the active code page.
+    std::vector<std::string> arguments;
+    arguments.reserve(argc);
+    for (int i = 0; i < argc; ++i) {
+        int size = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, wideArgv[i], -1,
+                                       nullptr, 0, nullptr, nullptr);
+        if (size == 0) {
+            std::cerr << "error: cannot encode command-line argument as UTF-8\n";
+            return 1;
+        }
+        std::string argument(size, '\0');
+        if (WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, wideArgv[i], -1,
+                                argument.data(), size, nullptr, nullptr) == 0) {
+            std::cerr << "error: cannot encode command-line argument as UTF-8\n";
+            return 1;
+        }
+        argument.pop_back(); // Exclude the converted null terminator.
+        arguments.push_back(std::move(argument));
+    }
+    std::vector<char*> argv;
+    argv.reserve(argc + 1);
+    for (auto& argument : arguments)
+        argv.push_back(argument.data());
+    argv.push_back(nullptr);
+    return runCli(argc, argv.data());
+}
+#else
+int main(int argc, char* argv[]) {
+    return runCli(argc, argv);
+}
+#endif
 
