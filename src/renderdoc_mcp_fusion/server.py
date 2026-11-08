@@ -44,8 +44,8 @@ for _index, (_name, _description, _spec) in enumerate(SPECS):
     if _name == "open_capture":
         _description = (
             "Open an RDC and return capture_id. auto/gui automatically launches RenderDoc and "
-            "loads its bridge without installing or enabling an extension. Existing pooled RDCs "
-            "are reused. Explicit window_id selects an existing bridge. GUI failures never switch "
+            "loads its bridge without installing or enabling an extension. Existing pooled RDCs and "
+            "matching live windows from earlier Hubs are reused. Explicit window_id selects an existing bridge. GUI failures never switch "
             "backend. Pass capture_id to all subsequent analysis calls.")
         _spec["properties"]["headless_mode"]["default"] = "persistent"
         _spec["properties"]["headless_mode"]["description"] = (
@@ -64,7 +64,7 @@ for _index, (_name, _description, _spec) in enumerate(SPECS):
 SPECS.extend([
     ("list_captures", "List local RDC files in an explicit directory without opening replay. Does not recurse into subdirectories.",
      schema({"directory": field("string", minLength=1), "offset": field("integer", minimum=0), "limit": field("integer", minimum=1, maximum=1000, default=100)}, ["directory"])),
-    ("list_instances", "List pooled RDC backends without starting replay.", schema()),
+    ("list_instances", "List pooled RDC backends and recoverable GUI windows without starting replay.", schema()),
     ("release_capture", "Release this connection's capture handle. Other clients remain connected. "
      "GUI windows remain open; headless replay may stop when the last handle is released.",
      schema({"capture_id": field("string", minLength=1)}, ["capture_id"])),

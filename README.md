@@ -122,13 +122,15 @@ Windows 通过同一用户、同一会话中的 Explorer 启动共享服务。�
 
 | `backend` | 行为 |
 | --- | --- |
-| `auto` | 指定窗口或可以自动启动 RenderDoc 时，使用 GUI；否则使用 headless |
+| `auto` | 有匹配的旧窗口、指定了窗口或可以自动启动 RenderDoc 时，使用 GUI；否则使用 headless |
 | `gui` | 使用 GUI；默认自动启动 RenderDoc 并加载桥接 |
 | `headless` | 使用附带的无窗口回放引擎 |
 
 自动启动 GUI 需要启用 `RENDERDOC_FUSION_GUI_AUTOSTART`，且配置的 `qrenderdoc.exe` 路径必须存在。默认路径为 `%ProgramFiles%\RenderDoc\qrenderdoc.exe`。其他安装路径需用 `RENDERDOC_FUSION_RENDERDOC` 指定。
 
 GUI 启动或查询失败时会返回错误，不会自动切换到 headless。指定 `window_id` 时，目标窗口必须已经加载桥接和目标 RDC。连接器不会替换其他窗口正在查看的文件。
+
+共享服务重启后，`list_instances` 的 `recoverable_gui_windows` 列出可重新接入的自动启动窗口。再次打开同一个 RDC 时，若只有一个匹配窗口，Fusion 会复用它；若有多个匹配窗口，调用会返回 `GUI_SELECTION_REQUIRED`，请从列表中选一个 `window_id` 重新打开。每个连接仍须取得自己的新 `capture_id`。手动启动的外部窗口仍需显式指定 `window_id`。
 
 每个连接都必须调用 `open_capture`。不要复制其他连接的句柄。出现以下情况后，请重新打开抓帧并取得新句柄：
 
@@ -185,6 +187,7 @@ headless 回放的空闲回收与共享服务的退出倒计时分别工作。
 - 正在执行或排队的操作不受空闲回收影响。
 - `release_capture` 只释放本连接的句柄。最后一个 headless 句柄释放后，服务可停止对应回放。
 - 关闭 RenderDoc 窗口会使对应 GUI 句柄失效，不影响其他 RDC。
+- 新版 GUI 桥接在独立线程发送心跳，长时间回放或导出期间仍可被发现。
 
 关闭连接器或共享服务不会关闭已有的 RenderDoc 窗口。请在不再需要窗口时手动关闭它。
 
@@ -223,11 +226,11 @@ headless 回放的空闲回收与共享服务的退出倒计时分别工作。
    python -m pip install .
    ```
 
-4. 关闭不再使用的旧 RenderDoc 回放窗口。
+4. 如需更新窗口内的 GUI 桥接，关闭该旧窗口；否则保留它，后续可重新接入。
 5. 在各客户端重新连接 MCP，以启动新连接器和新服务。如果工具列表仍是旧版，刷新客户端的 MCP 工具列表或重启客户端。
-6. 重新调用 `open_capture`，取得新句柄。GUI 模式下使用新回放窗口加载新桥接。
+6. 重新调用 `open_capture`，取得新句柄。GUI 模式下可复用仍存活的旧窗口；新启动的窗口加载新桥接。
 
-升级 GUI 桥接后，也需要新建 RenderDoc 回放窗口。旧窗口仍运行加载时的桥接代码。请关闭不再使用的旧窗口；新服务自动启动的窗口会加载新桥接。手动指定旧 `window_id` 不会更新其中的代码。
+旧窗口仍运行启动时加载的桥接代码。跨服务重启复用不要求关闭旧窗口；要让独立心跳等桥接更新生效，需要新建 RenderDoc 回放窗口。指定旧 `window_id` 不会更新其中的代码。
 
 停止共享服务会影响所有连接到它的客户端。重启前的捕获句柄全部失效。新旧版本不能共用同一个运行中的服务；版本不一致时会报错。
 
@@ -301,7 +304,7 @@ GUI 专用调用在 headless 捕获句柄上会返回 `UNSUPPORTED_OPERATION`。
 
 输出目录必须尚不存在。省略 `output_path` 时，程序在默认输出目录下分配新路径。导出后先检查结果中的 `complete`、`errors` 和 `warnings`，再查看 `manifest.json`。
 
-`list_captures` 列出指定目录中的 RDC 文件，使用 `offset` 和 `limit` 分页，不递归扫描。它不需要捕获句柄。`list_instances` 列出已打开的回放后端。`open_capture` 打开已有 RDC，不启动游戏或创建新抓帧。`mode="code"` 不会从机器码还原原始高级着色器源码。
+`list_captures` 列出指定目录中的 RDC 文件，使用 `offset` 和 `limit` 分页，不递归扫描。它不需要捕获句柄。`list_instances` 的 `instances` 列出当前服务的回放后端，`recoverable_gui_windows` 列出可重新接入的旧窗口。`open_capture` 打开已有 RDC，不启动游戏或创建新抓帧。`mode="code"` 不会从机器码还原原始高级着色器源码。
 
 ### 数据范围和错误处理
 

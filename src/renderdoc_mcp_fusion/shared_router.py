@@ -9,6 +9,7 @@ import uuid
 
 from .client_context import current_client
 from .errors import BackendTransportError, FusionError, require
+from .gui import recoverable_windows
 from .router import Router, path_identity
 from .extended_api import PUBLIC_TO_NATIVE, list_capture_files
 
@@ -82,7 +83,10 @@ class SharedRouter:
             executable = self.config.gui_executable
             autostart = (self.config.gui_autostart and os.name == "nt" and
                          sys.maxsize > 2**32 and executable is not None and executable.is_file())
-            backend = "gui" if window or autostart else "headless"
+            matches = (instance for instance in recoverable_windows(self.config)
+                       if instance.info.get("loaded") and instance.info.get("capture_path")
+                       and path_identity(instance.info["capture_path"]) == path_identity(path))
+            backend = "gui" if window or autostart or next(matches, None) else "headless"
         require(not window or backend == "gui", "INVALID_ARGUMENT", "window_id requires GUI")
         mode = args.get("headless_mode", "persistent")
         require(mode in {"persistent", "on_demand"}, "INVALID_ARGUMENT", "Choose persistent or on_demand")
@@ -135,9 +139,8 @@ class SharedRouter:
             return
         gui = entry.router.backends["gui"]
         if code in {"GUI_WINDOW_NOT_FOUND", "GUI_AUTOSTART_DISABLED", "GUI_EXECUTABLE_NOT_FOUND",
-                    "GUI_PLATFORM_UNSUPPORTED"} and not getattr(gui, "_launch_records", {}):
-            # These failures occur before spawning. An empty failed entry must
-            # not occupy the pool or prevent the service's idle exit forever.
+                    "GUI_PLATFORM_UNSUPPORTED", "CAPTURE_MISMATCH"} and not getattr(gui, "_launch_records", {}):
+            # No owned launch needs recovery; do not retain an empty entry.
             await self._retire(entry, code)
             return
         # A GUI launch may still be alive after failure/cancellation. Keep its
@@ -203,12 +206,22 @@ class SharedRouter:
             if entry.failure:
                 row["failure"] = entry.failure
             rows.append(row)
+        recoverable = [self._window_summary(instance) for instance in recoverable_windows(self.config)
+                       if instance.bridge_id not in self._windows]
         return {"service_pid": os.getpid(), "process_id": os.getpid(), "instances": rows,
+                "recoverable_gui_windows": recoverable,
                 "idle_timeout_seconds": None, "headless_idle_timeout_seconds": self.idle_timeout,
                 "automatic_idle_cleanup": "headless_only",
                 "should_exit": self.should_exit,
                 "keep_alive": self.keep_alive,
                 **self._connector_status()}
+
+    @staticmethod
+    def _window_summary(instance):
+        return {"window_id": instance.bridge_id, "gui_pid": instance.info["pid"],
+                "loaded": bool(instance.info.get("loaded")),
+                "capture_path": instance.info.get("capture_path"),
+                "heartbeat_age_seconds": round(instance.heartbeat_age, 3)}
 
     def _decorate(self, result, entry, capture_id):
         result = dict(result)
@@ -238,8 +251,30 @@ class SharedRouter:
 
     async def _open(self, args, caller):
         key, recipe, fingerprint = self._recipe(args)
-        entry = self.entries.get(key)
         window = recipe.get("window_id")
+        entry = self.entries.get(key)
+        if window is None and recipe["backend"] == "gui":
+            matches = [instance for instance in recoverable_windows(self.config)
+                       if instance.info.get("loaded") and instance.info.get("capture_path")
+                       and path_identity(instance.info["capture_path"]) == key[0]]
+            if len(matches) > 1:
+                raise FusionError("GUI_SELECTION_REQUIRED", "Select a RenderDoc window_id for this capture",
+                                  {"windows": [self._window_summary(instance) for instance in matches]})
+            if matches:
+                window = matches[0].bridge_id
+                claimed = self._windows.get(window)
+                if claimed is not None and claimed.key[:3] == key[:3] and not claimed.retired:
+                    entry = claimed
+                elif entry is None:
+                    recipe.update(window_id=window, allow_capture_switch=False)
+                    key = (*key[:4], window)
+                    entry = self.entries.get(key)
+            elif entry is None:
+                pooled = [candidate for candidate in self.entries.values()
+                          if candidate.key[:3] == key[:3] and not candidate.retired
+                          and candidate.pending]
+                if len(pooled) == 1:
+                    entry = pooled[0]
         claimed = self._windows.get(window) if window else None
         if claimed is not None and claimed.key[:3] == key[:3] and not claimed.retired:
             # The public window_id can select an automatically opened private
@@ -280,7 +315,7 @@ class SharedRouter:
                     if entry.router is None:
                         entry.router = self.router_factory(self.config)
                     if entry.opened is None:
-                        entry.opened = await entry.router.execute("open_capture", recipe)
+                        entry.opened = await entry.router.execute("open_capture", entry.recipe)
                         require(entry.opened.get("ok"), "OPEN_FAILED", "Backend did not open the capture")
                         entry.failure = None
                     else:
@@ -294,7 +329,7 @@ class SharedRouter:
                         if entry.retired:
                             return await self._open(args, caller)
                         try:
-                            entry.opened = await entry.router.execute("open_capture", recipe)
+                            entry.opened = await entry.router.execute("open_capture", entry.recipe)
                             require(entry.opened.get("ok"), "OPEN_FAILED", "Backend did not open the capture")
                             entry.failure = None
                         except BaseException:

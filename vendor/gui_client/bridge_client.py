@@ -93,6 +93,31 @@ class LiveBridgeClient:
         instances.sort(key=lambda item: float(item.info.get("updated_at") or 0.0), reverse=True)
         return instances
 
+    def list_session_instances(self) -> list[LiveBridgeInstance]:
+        """Find bridges left in private session directories by earlier Hubs."""
+        try:
+            sessions = list((self.ipc_dir / "sessions").iterdir())
+        except OSError:
+            return []
+        instances: list[LiveBridgeInstance] = []
+        for session in sessions:
+            if not session.is_dir():
+                continue
+            try:
+                children = list((session / "instances").iterdir())
+            except OSError:
+                continue
+            for child in children:
+                if not child.is_dir():
+                    continue
+                instance = self._instance_from_paths(
+                    bridge_id=child.name, ipc_dir=child,
+                    requests_dir=child / "requests", responses_dir=child / "responses",
+                    heartbeat_file=child / "heartbeat", info_file=child / "info.json")
+                if instance is not None:
+                    instances.append(instance)
+        return instances
+
     def list_windows(self) -> dict[str, Any]:
         windows = [self._window_summary(instance) for instance in self.list_instances()]
         return {
@@ -203,7 +228,9 @@ class LiveBridgeClient:
             return None
 
         try:
-            info = json.loads(info_file.read_text(encoding="utf-8"))
+            # Identity is atomically replaced too; use the same bounded reader
+            # as responses so a brief Windows sharing conflict keeps it visible.
+            info = self._read_json_retry(info_file)
         except (OSError, ValueError):
             return None
         # A heartbeat can precede the first info write (including with older

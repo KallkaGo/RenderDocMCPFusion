@@ -64,8 +64,11 @@ class BridgeServer(QObject):
         self.info_file = os.path.join(self.instance_dir, "info.json")
         self._timer = None
         self._thread = None
+        self._heartbeat_thread = None
         self._stop_event = threading.Event()
         self._running = False
+        self._identity_ready = False
+        self._heartbeat_lock = threading.Lock()
         os.makedirs(IPC_DIR, exist_ok=True)
         os.makedirs(INSTANCES_DIR, exist_ok=True)
         os.makedirs(self.requests_dir, exist_ok=True)
@@ -74,8 +77,12 @@ class BridgeServer(QObject):
     def start(self):
         self._running = True
         self._stop_event.clear()
+        self._identity_ready = False
         self._cleanup_instance_files()
         self._cleanup_stale_instances()
+        self._heartbeat_thread = threading.Thread(target=self._heartbeat_main,
+                                                  name="renderdoc_mcp_heartbeat", daemon=True)
+        self._heartbeat_thread.start()
         if QTimer is not None:
             self._timer = QTimer(self)
             self._timer.timeout.connect(self._poll)
@@ -86,20 +93,31 @@ class BridgeServer(QObject):
         return True
 
     def stop(self):
-        self._running = False
-        self._stop_event.set()
+        with self._heartbeat_lock:
+            self._running = False
+            self._stop_event.set()
         if self._timer is not None:
             self._timer.stop()
             self._timer = None
         if self._thread is not None:
             self._thread.join(timeout=1.0)
             self._thread = None
+        if self._heartbeat_thread is not None:
+            self._heartbeat_thread.join(timeout=1.0)
+            self._heartbeat_thread = None
         self._cleanup_instance_dir()
 
     def _thread_main(self):
         while not self._stop_event.is_set():
             self._poll()
             self._stop_event.wait(0.1)
+
+    def _heartbeat_main(self):
+        while not self._stop_event.is_set():
+            with self._heartbeat_lock:
+                if self._running and self._identity_ready:
+                    self._write_heartbeat(self.heartbeat_file)
+            self._stop_event.wait(0.25)
 
     def _cleanup_instance_files(self):
         for path in (self.heartbeat_file, self.info_file):
@@ -204,14 +222,20 @@ class BridgeServer(QObject):
         try:
             self._write_json_atomic(self.info_file, self._instance_info())
         except OSError:
+            self._identity_ready = False
             return
+        self._identity_ready = True
+        BridgeServer._write_heartbeat(self.heartbeat_file)
+
+    @staticmethod
+    def _write_heartbeat(path):
         try:
-            temporary = self.heartbeat_file + ".tmp"
+            temporary = "{}.{}.tmp".format(path, uuid.uuid4().hex)
             with open(temporary, "w", encoding="utf-8") as handle:
                 handle.write(str(time.time()))
-            os.replace(temporary, self.heartbeat_file)
+            os.replace(temporary, path)
         except OSError:
-            pass
+            BridgeServer._safe_remove(temporary)
 
     def _poll(self):
         if not self._running:
@@ -244,9 +268,7 @@ class BridgeServer(QObject):
             else:
                 response_file = os.path.join(self.responses_dir, "unknown.json")
 
-            # Replay/export can outlive the client's heartbeat freshness window.
-            # Publish fresh liveness before making the response observable, so a
-            # following request does not mistake this working instance for dead.
+            # Publish the updated capture state before the response is visible.
             self._write_liveness()
             self._write_json_atomic(response_file, response)
         except Exception:  # pragma: no cover - runtime safety

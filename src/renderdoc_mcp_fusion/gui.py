@@ -9,6 +9,15 @@ import uuid
 from .errors import BackendTransportError, FusionError
 
 
+def recoverable_windows(config):
+    if str(config.root) not in sys.path:
+        sys.path.insert(0, str(config.root))
+    from vendor.gui_client import LiveBridgeClient
+    client = LiveBridgeClient(timeout=config.timeout)
+    client.ipc_dir = config.ipc_dir
+    return client.list_session_instances()
+
+
 def schema(properties=None, required=None):
     return {"type": "object", "properties": properties or {}, "required": required or [], "additionalProperties": False}
 
@@ -56,6 +65,7 @@ class GuiBackend:
             client.responses_dir = directory / "responses"
             client.heartbeat_file = directory / "heartbeat"
             return client
+        self._client_at = client_at
         self._private_client = client_at(self.private_ipc_dir)
         self._external_client = client_at(config.ipc_dir)
         self.client = self._private_client
@@ -93,6 +103,12 @@ class GuiBackend:
             for window in client.list_windows()["data"]["windows"]:
                 windows.append({**window, "owned_by_this_mcp": owned,
                     "requires_explicit_window_id": not owned})
+        known = {window["window_id"] for window in windows}
+        for instance in self._external_client.list_session_instances():
+            if instance.bridge_id not in known:
+                window = self._external_client._window_summary(instance)
+                windows.append({**window, "owned_by_this_mcp": False,
+                    "requires_explicit_window_id": True})
         return windows
 
     def _helpers(self):
@@ -107,6 +123,16 @@ class GuiBackend:
     def deactivate_monitor(self):
         self._watch_active = False
 
+    @staticmethod
+    def _launch_has_exited(record):
+        process = record.get("process")
+        if process is not None:
+            return process.poll() is not None
+        pending = record.get("pending_launch")
+        if pending is not None and not pending.completed.is_set():
+            return False
+        return record.get("status", {}).get("state") == "failed"
+
     def process_has_exited(self):
         try:
             if self._process_ref is not None:
@@ -115,9 +141,7 @@ class GuiBackend:
             records = list(records)
             # Popen owns a stable Windows process handle even when bootstrap
             # failed before discovery could establish a ProcessRef.
-            return bool(records) and all(record["task"].done() and (
-                record["process"].poll() is not None if record.get("process") is not None
-                else record.get("status", {}).get("state") == "failed") for record in records)
+            return bool(records) and all(record["task"].done() and self._launch_has_exited(record) for record in records)
         except OSError:
             # Failure to inspect a process is never proof that it exited.
             return False
@@ -133,6 +157,8 @@ class GuiBackend:
         instances = self._private_client.list_instances()
         if window_id is not None:
             instances += self._external_client.list_instances()
+            instances += [instance for instance in self._external_client.list_session_instances()
+                          if not instance.ipc_dir.is_relative_to(self.private_ipc_dir)]
             return [i for i in instances if window_id in (
                 i.bridge_id, str(i.info.get("window_id")), str(i.info.get("bridge_id")))]
         return instances
@@ -155,8 +181,12 @@ class GuiBackend:
             self._process_refs.append(process)
             self._process_ref = process
             self._watch_active = True
-            self.client = (self._private_client if instance.ipc_dir.is_relative_to(self.private_ipc_dir)
-                           else self._external_client)
+            if instance.ipc_dir.is_relative_to(self.private_ipc_dir):
+                self.client = self._private_client
+            elif instance.ipc_dir.is_relative_to(self.config.ipc_dir / "sessions"):
+                self.client = self._client_at(instance.ipc_dir.parent.parent)
+            else:
+                self.client = self._external_client
             self.window_id = instance.bridge_id
             self.epoch += 1
             return True
@@ -172,7 +202,8 @@ class GuiBackend:
         return module.launch_gui(
             renderdoc=str(self.config.gui_executable), window_id=window_id,
             visible=self.config.gui_visible, timeout=self.config.gui_start_timeout,
-            ipc_dir=self.private_ipc_dir, on_spawn=on_spawn, state_dir=self.private_ipc_dir / "startup")
+            ipc_dir=self.private_ipc_dir, on_spawn=on_spawn, state_dir=self.private_ipc_dir / "startup",
+            on_pending=lambda request: self._launch_records[window_id].update(pending_launch=request))
 
     async def _start_gui(self, window_id, record):
         loop = asyncio.get_running_loop()
@@ -191,6 +222,9 @@ class GuiBackend:
         try:
             payload = await loop.run_in_executor(self._executor, launch)
             status.update(payload)
+            # A UAC approval can arrive just after the launcher timed out.
+            if record["process"] is not None:
+                status["process_id"] = record["process"].pid
             if payload.get("error") or not (payload.get("result") or {}).get("ready"):
                 status["state"] = "failed"
                 code = "GUI_START_TIMEOUT" if payload.get("error_code") == "timeout" else "GUI_START_FAILED"
@@ -229,10 +263,7 @@ class GuiBackend:
         if self._select(self._matches(window_id)):
             return
         def confirmed_exit(record):
-            process = record["process"]
-            return record["task"].done() and (
-                process.poll() is not None if process is not None
-                else record.get("status", {}).get("state") == "failed")
+            return record["task"].done() and self._launch_has_exited(record)
 
         if window_id is None:
             # A default request shares an existing owned launch even when it

@@ -15,6 +15,8 @@ from pathlib import Path
 import re
 import subprocess
 import sys
+import tempfile
+import threading
 import time
 import uuid
 
@@ -94,10 +96,95 @@ def _set_window_visibility(pid, visible):
         return {"confirmed": False, "reason": "visibility_check_failed", "error": str(exc)}
 
 
+class _ShellProcess:
+    """Popen's PID/poll contract backed by the actual elevated GUI handle."""
+    def __init__(self, handle):
+        import win32process
+        self._handle = handle  # PyHANDLE closes itself when the record is released.
+        self.pid = win32process.GetProcessId(handle)
+
+    def poll(self):
+        import win32event
+        import win32process
+        result = win32event.WaitForSingleObject(self._handle, 0)
+        if result == win32event.WAIT_TIMEOUT:
+            return None
+        if result != win32event.WAIT_OBJECT_0:
+            raise OSError(f"Unexpected elevated GUI process wait result: {result}")
+        return win32process.GetExitCodeProcess(self._handle)
+
+
+class _ElevationRequest:
+    """Keep a pending UAC request observable after the readiness budget expires."""
+    def __init__(self):
+        self.completed = threading.Event()
+        self.process = None
+        self.info = {"pending": True}
+
+
+def _launch_elevated(executable, bootstrap, root, environment, status_path,
+                     visible, on_spawn, on_pending, deadline):
+    # ShellExecuteEx cannot accept an environment block. Run this tiny script
+    # inside the configured GUI, not in an elevated Python helper process.
+    shim = status_path.with_suffix(".py")
+    names = ("BRIDGE_DIR", "BOOTSTRAP_STATUS", "WINDOW_ID", "CAPTURE", "IPC_DIR")
+    bridge_environment = {"RENDERDOC_FUSION_" + name: environment["RENDERDOC_FUSION_" + name]
+                          for name in names if "RENDERDOC_FUSION_" + name in environment}
+    bridge_environment.setdefault("RENDERDOC_FUSION_IPC_DIR",
+                                  str(Path(tempfile.gettempdir()) / "renderdoc_mcp_fusion"))
+    shim.write_text(
+        "import os\n"
+        + f"os.environ.update({bridge_environment!r})\n"
+        + "os.environ.pop('RENDERDOC_FUSION_OWNER_PID', None)\n"
+        + "os.environ.pop('RENDERDOC_FUSION_OWNER_TOKEN', None)\n"
+        + f"with open({str(bootstrap)!r}, encoding='utf-8') as _fusion_source:\n"
+        + f"    exec(compile(_fusion_source.read(), {str(bootstrap)!r}, 'exec'), globals())\n",
+        encoding="utf-8")
+    request = _ElevationRequest()
+    if on_pending is not None:
+        on_pending(request)
+
+    def run():
+        initialized = False
+        try:
+            import pythoncom
+            import win32con
+            from win32com.shell import shell, shellcon
+            pythoncom.CoInitializeEx(pythoncom.COINIT_APARTMENTTHREADED)
+            initialized = True
+            result = shell.ShellExecuteEx(
+                fMask=shellcon.SEE_MASK_NOCLOSEPROCESS | 0x100 | shellcon.SEE_MASK_FLAG_NO_UI,
+                # 0x100 = SEE_MASK_NOASYNC: retain the worker until UAC resolves.
+                lpVerb="runas", lpFile=str(executable),
+                lpParameters=subprocess.list2cmdline(["--python", str(shim)]),
+                lpDirectory=str(root), nShow=win32con.SW_SHOWNORMAL if visible else win32con.SW_HIDE)
+            handle = result.get("hProcess")
+            if handle is None:
+                raise OSError("Windows did not return the elevated GUI process handle")
+            request.process = _ShellProcess(handle)
+            request.info["process_id"] = request.process.pid
+            if on_spawn is not None:
+                on_spawn(request.process)
+        except Exception as exc:
+            cancelled = getattr(exc, "winerror", None) == 1223
+            request.info.update(error_code="elevation_cancelled" if cancelled else "launch_failed",
+                                error="Windows administrator launch was cancelled by the user." if cancelled else str(exc))
+        finally:
+            request.info["pending"] = False
+            request.completed.set()
+            if initialized:
+                pythoncom.CoUninitialize()
+
+    threading.Thread(target=run, name="fusion-gui-uac", daemon=True).start()
+    request.completed.wait(max(0, deadline - time.monotonic()))
+    return request
+
+
 def launch_gui(*, renderdoc: str, capture: str | None = None,
                window_id: str | None = None, visible: bool = True,
                timeout: float = 60.0, ipc_dir: str | Path | None = None,
-               on_spawn=None, state_dir: str | Path | None = None) -> dict:
+               on_spawn=None, state_dir: str | Path | None = None,
+               on_pending=None) -> dict:
     """Validate paths, spawn one GUI, and wait for its unique bootstrap status."""
     root = Path(__file__).resolve().parents[1]
     window_id = window_id if window_id is not None else "fusion-" + uuid.uuid4().hex[:12]
@@ -142,12 +229,31 @@ def launch_gui(*, renderdoc: str, capture: str | None = None,
         startup.dwFlags |= subprocess.STARTF_USESHOWWINDOW
         startup.wShowWindow = subprocess.SW_HIDE
         popen_options["startupinfo"] = startup
-    process = subprocess.Popen([str(executable), "--python", str(bootstrap)], **popen_options)
-    if on_spawn is not None:
-        on_spawn(process)
-    payload = {"process_id": process.pid, "window_id": window_id,
-               "status_file": str(status_path), "result": None}
     deadline = time.monotonic() + timeout
+    payload = {"process_id": None, "window_id": window_id,
+               "status_file": str(status_path), "result": None}
+    try:
+        process = subprocess.Popen([str(executable), "--python", str(bootstrap)], **popen_options)
+    except OSError as exc:
+        if exc.winerror != 740:  # ERROR_ELEVATION_REQUIRED
+            raise
+        request = _launch_elevated(executable, bootstrap, root, environment,
+                                  status_path, visible, on_spawn, on_pending, deadline)
+        payload["elevation"] = request.info
+        if not request.completed.is_set():
+            payload.update(error_code="timeout", error=(
+                f"Timed out after {timeout:g} seconds waiting for Windows administrator approval. "
+                "The UAC request is still pending; approve or cancel it before retrying. "
+                "If approved later, the GUI may still open."))
+            return payload
+        if "error" in request.info:
+            payload.update(error_code=request.info["error_code"], error=request.info["error"])
+            return payload
+        process = request.process
+    else:
+        if on_spawn is not None:
+            on_spawn(process)
+    payload["process_id"] = process.pid
     status_error = None
     while True:
         try:

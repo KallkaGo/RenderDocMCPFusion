@@ -112,7 +112,7 @@ class Router:
                 "idle_timeout_seconds": MCP_IDLE_TIMEOUT_SECONDS,
                 "idle_remaining_seconds": self.headless_idle_remaining()},
             "output_directory": str(self.config.output_dir),
-            "selection_policy": "Automatic GUI windows are private to this MCP. External manual windows require an explicit window_id. Headless on_demand releases its engine after each call and reopens the pinned file for the next query."}
+            "selection_policy": "Matching automatically launched GUI windows can be reused after a Hub restart. External manual windows require an explicit window_id. Headless on_demand releases its engine after each call and reopens the pinned file for the next query."}
 
     async def open_capture(self, capture_path, backend="auto", window_id=None, headless_mode="on_demand", allow_capture_switch=True):
         path = Path(capture_path).expanduser().resolve()
